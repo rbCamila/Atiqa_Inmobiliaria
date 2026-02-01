@@ -1,0 +1,142 @@
+// schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums para estandarizar estados
+enum Role {
+  ADMIN
+  AGENTE
+}
+
+enum PropertyStatus {
+  DISPONIBLE
+  RESERVADO
+  VENDIDO
+  ALQUILADO
+  RETIRADO
+}
+
+enum OperationType {
+  VENTA
+  ALQUILER
+}
+
+enum DocumentType {
+  PARTIDA_REGISTRAL
+  ESCRITURA_PUBLICA
+  HR_PU
+  DNI_PROPIETARIO
+  CONTRATO_FIRMADO
+  OTRO
+}
+
+model User {
+  id          Int       @id @default(autoincrement())
+  email       String    @unique
+  password    String
+  fullName    String
+  phone       String?
+  role        Role      @default(AGENTE)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  
+  // Relaciones
+  properties  Property[] @relation("AgentProperties")
+  sales       Sale[]     @relation("AgentSales")
+  closings    ClosingReport[] 
+}
+
+model Client {
+  id          Int       @id @default(autoincrement())
+  fullName    String
+  dniRuc      String?
+  phone       String
+  email       String?
+  isOwner     Boolean   @default(true) // Si es false, es un comprador potencial
+  createdAt   DateTime  @default(now())
+
+  properties  Property[]
+}
+
+model Property {
+  id            Int            @id @default(autoincrement())
+  title         String
+  description   String         @db.Text
+  address       String
+  city          String
+  price         Decimal        @db.Decimal(12, 2)
+  currency      String         @default("USD") // USD o PEN
+  commissionPct Decimal        @db.Decimal(5, 2) // Ej: 3.00 o 5.00
+  status        PropertyStatus @default(DISPONIBLE)
+  operation     OperationType
+  
+  // Claves foráneas
+  agentId       Int
+  agent         User           @relation("AgentProperties", fields: [agentId], references: [id])
+  ownerId       Int
+  owner         Client         @relation(fields: [ownerId], references: [id])
+
+  // Relaciones
+  documents     Document[]
+  sale          Sale?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model Document {
+  id          Int          @id @default(autoincrement())
+  name        String
+  url         String       // Link a S3 o almacenamiento local
+  type        DocumentType
+  propertyId  Int
+  property    Property     @relation(fields: [propertyId], references: [id])
+  uploadedAt  DateTime     @default(now())
+}
+
+// Tabla para registrar el cierre financiero y flujo de caja
+model Sale {
+  id              Int       @id @default(autoincrement())
+  propertyId      Int       @unique
+  property        Property  @relation(fields: [propertyId], references: [id])
+  
+  finalPrice      Decimal   @db.Decimal(12, 2)
+  totalCommission Decimal   @db.Decimal(10, 2) // Monto total en dinero
+  closedAt        DateTime  @default(now())
+
+  // Participantes
+  listingAgentId  Int       // Agente que captó (User)
+  listingAgent    User      @relation("AgentSales", fields: [listingAgentId], references: [id])
+  
+  // Si fue compartido con otra inmobiliaria
+  isShared        Boolean   @default(false)
+  externalAgency  String?   // Nombre de la otra inmobiliaria
+  sharedPct       Decimal?  @default(50.00) // Por defecto 50%
+
+  // Si fue compartido internamente (otro agente trajo al comprador)
+  sellingAgentId  Int?      // ID del otro agente interno si aplica
+}
+
+// Formularios internos (Reporte de cierre que llenan los agentes)
+model ClosingReport {
+  id          Int      @id @default(autoincrement())
+  agentId     Int
+  agent       User     @relation(fields: [agentId], references: [id])
+  content     Json     // Datos flexibles del formulario
+  status      String   @default("PENDIENTE") // PENDIENTE, APROBADO, PAGADO
+  createdAt   DateTime @default(now())
+}
+
+model InternalPost {
+  id          Int      @id @default(autoincrement())
+  title       String
+  body        String   @db.Text
+  category    String   // CURSO, EVENTO, NOTICIA
+  createdAt   DateTime @default(now())
+}
