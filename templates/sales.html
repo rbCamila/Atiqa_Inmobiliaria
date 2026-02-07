@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Reporte de Ventas{% endblock %}
+{% block content %}
+<div class="card">
+    <form method="GET" class="flex-between" style="gap: 1rem;">
+        <input type="date" name="startDate" class="form-control">
+        <input type="date" name="endDate" class="form-control">
+        <button type="submit" class="btn btn-primary">Filtrar</button>
+    </form>
+</div>
+
+<div class="card">
+    <table>
+        <thead>
+            <tr>
+                <th>Fecha</th>
+                <th>Propiedad</th>
+                <th>Precio Final</th>
+                <th>Comisión Total</th>
+                <th>Estado</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for sale in sales %}
+            <tr>
+                <td>{{ sale.FechaCierre }}</td>
+                <td>{{ sale.Property }}</td>
+                <td>{{ sale.finalPrice }}</td>
+                <td>{{ sale.IngresoComision }}</td>
+                <td><span class="badge badge-success">{{ sale.EstadoCierre }}</span></td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5">Selecciona un rango de fechas para ver el reporte.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS `Properties` (
   `operation` ENUM('VENTA', 'ALQUILER') NOT NULL,
   `agentId` INT NOT NULL,
   `ownerId` INT NOT NULL,
+  `exclusive` TINYINT(1) DEFAULT 0,
   `createdAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `updatedAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
@@ -60,12 +61,23 @@ CREATE TABLE IF NOT EXISTS `Documents` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(100),
   `url` VARCHAR(500) NOT NULL,
-  `type` ENUM('PARTIDA_REGISTRAL', 'ESCRITURA_PUBLICA', 'HR_PU', 'DNI_PROPIETARIO', 'CONTRATO_FIRMADO', 'OTRO') NOT NULL,
+  `type` ENUM('PARTIDA_REGISTRAL', 'ESCRITURA_PUBLICA', 'HR_PU', 'DNI_PROPIETARIO', 'CONTRATO_FIRMADO', 'POSESION', 'OTRO') NOT NULL,
   `propertyId` INT NOT NULL,
   `uploadedAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `fk_document_property` (`propertyId`),
   CONSTRAINT `fk_document_property` FOREIGN KEY (`propertyId`) REFERENCES `Properties` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla de Logs de Publicación en Redes Sociales
+CREATE TABLE IF NOT EXISTS `SocialMediaLogs` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `propertyId` INT NOT NULL,
+  `network` ENUM('FACEBOOK', 'INSTAGRAM', 'TIKTOK', 'PORTAL_WEB') NOT NULL,
+  `postUrl` VARCHAR(500),
+  `postedAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  CONSTRAINT `fk_social_property` FOREIGN KEY (`propertyId`) REFERENCES `Properties` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabla de Ventas / Cierres (Finanzas)
@@ -83,6 +95,7 @@ CREATE TABLE IF NOT EXISTS `Sales` (
   `sellingAgentId` INT DEFAULT NULL,
   
   `closedAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `status` ENUM('PENDIENTE', 'APROBADO', 'RECHAZADO') DEFAULT 'PENDIENTE',
   `notes` TEXT,
   PRIMARY KEY (`id`),
   UNIQUE KEY `property_unique` (`propertyId`),
@@ -116,12 +129,30 @@ FOR EACH ROW
 BEGIN
     DECLARE opType VARCHAR(20);
     
-    SELECT operation INTO opType FROM Properties WHERE id = NEW.propertyId;
+    IF NEW.status = 'APROBADO' THEN
+        SELECT operation INTO opType FROM Properties WHERE id = NEW.propertyId;
+        
+        IF opType = 'VENTA' THEN
+            UPDATE Properties SET status = 'VENDIDO' WHERE id = NEW.propertyId;
+        ELSE
+            UPDATE Properties SET status = 'ALQUILADO' WHERE id = NEW.propertyId;
+        END IF;
+    END IF;
+END //
+
+DROP TRIGGER IF EXISTS `trg_UpdateStatusOnSaleUpdate` //
+CREATE TRIGGER `trg_UpdateStatusOnSaleUpdate` AFTER UPDATE ON `Sales`
+FOR EACH ROW
+BEGIN
+    DECLARE opType VARCHAR(20);
     
-    IF opType = 'VENTA' THEN
-        UPDATE Properties SET status = 'VENDIDO' WHERE id = NEW.propertyId;
-    ELSE
-        UPDATE Properties SET status = 'ALQUILADO' WHERE id = NEW.propertyId;
+    IF NEW.status = 'APROBADO' AND OLD.status != 'APROBADO' THEN
+        SELECT operation INTO opType FROM Properties WHERE id = NEW.propertyId;
+        IF opType = 'VENTA' THEN
+            UPDATE Properties SET status = 'VENDIDO' WHERE id = NEW.propertyId;
+        ELSE
+            UPDATE Properties SET status = 'ALQUILADO' WHERE id = NEW.propertyId;
+        END IF;
     END IF;
 END //
 
@@ -172,23 +203,34 @@ CREATE PROCEDURE `sp_Property_Create`(
     IN p_commissionPct DECIMAL(5, 2),
     IN p_operation VARCHAR(20),
     IN p_agentId INT,
-    IN p_ownerId INT
+    IN p_ownerId INT,
+    IN p_exclusive TINYINT(1)
 )
 BEGIN
-    INSERT INTO Properties (title, description, address, city, price, currency, commissionPct, operation, agentId, ownerId)
-    VALUES (p_title, p_description, p_address, p_city, p_price, p_currency, p_commissionPct, p_operation, p_agentId, p_ownerId);
+    INSERT INTO Properties (title, description, address, city, price, currency, commissionPct, operation, agentId, ownerId, exclusive)
+    VALUES (p_title, p_description, p_address, p_city, p_price, p_currency, p_commissionPct, p_operation, p_agentId, p_ownerId, p_exclusive);
 END //
 
 DROP PROCEDURE IF EXISTS `sp_Property_List` //
 CREATE PROCEDURE `sp_Property_List`(
-    IN p_status VARCHAR(20),
-    IN p_agentId INT
+    IN p_status VARCHAR(20) COLLATE utf8mb4_unicode_ci,
+    IN p_agentId INT,
+    IN p_viewerRole VARCHAR(10) COLLATE utf8mb4_unicode_ci,
+    IN p_viewerId INT
 )
 BEGIN
     SELECT 
         p.id, p.title, p.price, p.currency, p.operation, p.status, p.address,
+        p.commissionPct, p.exclusive,
         u.fullName as AgentName, u.phone as AgentPhone, u.photoUrl as AgentPhoto,
-        c.fullName as OwnerName
+        CASE 
+            WHEN p_viewerRole = 'ADMIN' OR p.agentId = p_viewerId THEN c.fullName 
+            ELSE 'CONFIDENCIAL' 
+        END as OwnerName,
+        CASE 
+            WHEN p_viewerRole = 'ADMIN' OR p.agentId = p_viewerId THEN c.phone 
+            ELSE NULL 
+        END as OwnerPhone
     FROM Properties p
     JOIN Users u ON p.agentId = u.id
     JOIN Clients c ON p.ownerId = c.id
@@ -243,11 +285,12 @@ CREATE PROCEDURE `sp_Sale_Register`(
     IN p_isShared BOOLEAN,
     IN p_externalAgency VARCHAR(100),
     IN p_sharedPct DECIMAL(5, 2),
-    IN p_sellingAgentId INT
+    IN p_sellingAgentId INT,
+    IN p_status VARCHAR(20)
 )
 BEGIN
-    INSERT INTO Sales (propertyId, finalPrice, totalCommission, listingAgentId, isShared, externalAgency, sharedPct, sellingAgentId)
-    VALUES (p_propertyId, p_finalPrice, p_totalCommission, p_listingAgentId, p_isShared, p_externalAgency, p_sharedPct, p_sellingAgentId);
+    INSERT INTO Sales (propertyId, finalPrice, totalCommission, listingAgentId, isShared, externalAgency, sharedPct, sellingAgentId, status)
+    VALUES (p_propertyId, p_finalPrice, p_totalCommission, p_listingAgentId, p_isShared, p_externalAgency, p_sharedPct, p_sellingAgentId, p_status);
 END //
 
 -- Reporte de Dashboard (Filtrar ingresos por fecha)
@@ -263,6 +306,7 @@ BEGIN
         p.operation,
         s.finalPrice,
         s.totalCommission as IngresoComision,
+        s.status as EstadoCierre,
         s.closedAt as FechaCierre,
         u_capt.fullName as AgenteCaptador,
         CASE 
@@ -273,7 +317,7 @@ BEGIN
     FROM Sales s
     JOIN Properties p ON s.propertyId = p.id
     JOIN Users u_capt ON s.listingAgentId = u_capt.id
-    WHERE DATE(s.closedAt) BETWEEN p_startDate AND p_endDate
+    WHERE (DATE(s.closedAt) BETWEEN p_startDate AND p_endDate) AND s.status = 'APROBADO'
     ORDER BY s.closedAt DESC;
 END //
 

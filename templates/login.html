@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Arteca</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="icon" href="{{ url_for('static', filename='logo/logo.png') }}" type="image/png">
+</head>
+<body>
+    <div class="login-wrapper">
+        <!-- Lado Izquierdo: Imagen y Branding -->
+        <div class="login-visual">
+            <div class="visual-overlay"></div>
+            <div class="visual-content">
+                <img src="{{ url_for('static', filename='logo/logo.png') }}" alt="Logo" style="height: 64px; margin-bottom: 1.5rem; filter: brightness(0) invert(1);">
+                <h1>Atiqa Inmobiliaria</h1>
+                <p>Plataforma de gestión de activos, ventas y clientes.</p>
+            </div>
+        </div>
+        
+        <!-- Lado Derecho: Formulario -->
+        <div class="login-form-side">
+            <div class="login-form-container">
+                <div class="brand-mobile">
+                    <img src="{{ url_for('static', filename='logo/logo.png') }}" alt="Logo" style="height: 40px; vertical-align: middle; margin-right: 0.5rem;">
+                    Atiqa
+                </div>
+                <h2 class="login-title">Bienvenido</h2>
+                <p class="login-subtitle">Ingresa tus credenciales para acceder al sistema</p>
+
+                {% with messages = get_flashed_messages() %}
+                    {% if messages %}
+                        <div class="badge badge-danger" style="width: 100%; padding: 0.75rem; margin-bottom: 1.5rem; justify-content: center;">
+                            {{ messages[0] }}
+                        </div>
+                    {% endif %}
+                {% endwith %}
+
+                <form action="{{ url_for('login_view') }}" method="POST">
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" name="email" class="form-control" placeholder="nombre@ejemplo.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Contraseña</label>
+                        <input type="password" name="password" class="form-control" placeholder="••••••••" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Iniciar Sesión</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atiqa Inmobiliaria</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="icon" href="{{ url_for('static', filename='logo/logo.png') }}" type="image/png">
+    <!-- Iconos simples (puedes usar FontAwesome) -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+</head>
+<body>
+    {% if session.get('user') %}
+    <nav class="sidebar">
+        <div class="brand">
+            <img src="{{ url_for('static', filename='logo/logo.png') }}" alt="Logo" style="height: 32px; width: auto;"> Atiqa
+        </div>
+        <ul class="nav-links">
+            <li class="nav-item">
+                <a href="{{ url_for('dashboard_view') }}" class="nav-link {{ 'active' if request.endpoint == 'dashboard_view' }}">
+                    <i class="fas fa-home nav-icon"></i> Inicio
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ url_for('properties_view') }}" class="nav-link {{ 'active' if 'properties' in request.endpoint }}">
+                    <i class="fas fa-home-user nav-icon"></i> Propiedades
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ url_for('clients_view') }}" class="nav-link {{ 'active' if 'clients' in request.endpoint }}">
+                    <i class="fas fa-users nav-icon"></i> Clientes
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ url_for('sales_view') }}" class="nav-link {{ 'active' if 'sales' in request.endpoint }}">
+                    <i class="fas fa-chart-line nav-icon"></i> Ventas
+                </a>
+            </li>
+            {% if session['user']['role'] == 'ADMIN' %}
+            <li class="nav-item">
+                <a href="{{ url_for('users_view') }}" class="nav-link {{ 'active' if 'users' in request.endpoint }}">
+                    <i class="fas fa-user-shield nav-icon"></i> Usuarios
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+        <div style="margin-top: auto;">
+            <a href="{{ url_for('logout') }}" class="nav-link" style="color: var(--danger);">
+                <i class="fas fa-sign-out-alt nav-icon"></i> Cerrar Sesión
+            </a>
+        </div>
+    </nav>
+    {% endif %}
+
+    <main class="main-content">
+        {% if session.get('user') %}
+        <header class="top-bar">
+            <div class="page-title">{% block title %}Dashboard{% endblock %}</div>
+            <div class="user-profile">
+                <span>{{ session['user']['fullName'] }}</span>
+                <span class="badge badge-info">{{ session['user']['role'] }}</span>
+            </div>
+        </header>
+        {% endif %}
+
+        <div class="content-area">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        {% set bg_color = '#E7F8E8' if category == 'success' else '#FDE8EB' %}
+                        <div class="card" style="background-color: {{ bg_color }}; padding: 1rem; margin-bottom: 1rem;">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+</body>
+</html>

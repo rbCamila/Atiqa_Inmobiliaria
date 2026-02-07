@@ -34,6 +34,7 @@ enum DocumentType {
   HR_PU
   DNI_PROPIETARIO
   CONTRATO_FIRMADO
+  POSESION
   OTRO
 }
 
@@ -50,7 +51,6 @@ model User {
   // Relaciones
   properties  Property[] @relation("AgentProperties")
   sales       Sale[]     @relation("AgentSales")
-  closings    ClosingReport[] 
 }
 
 model Client {
@@ -76,6 +76,7 @@ model Property {
   commissionPct Decimal        @db.Decimal(5, 2) // Ej: 3.00 o 5.00
   status        PropertyStatus @default(DISPONIBLE)
   operation     OperationType
+  exclusive     Boolean        @default(false)
   
   // Claves foráneas
   agentId       Int
@@ -85,6 +86,7 @@ model Property {
 
   // Relaciones
   documents     Document[]
+  socialLogs    SocialMediaLog[]
   sale          Sale?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
@@ -98,6 +100,15 @@ model Document {
   propertyId  Int
   property    Property     @relation(fields: [propertyId], references: [id])
   uploadedAt  DateTime     @default(now())
+}
+
+model SocialMediaLog {
+  id          Int      @id @default(autoincrement())
+  propertyId  Int
+  property    Property @relation(fields: [propertyId], references: [id])
+  network     String   // FACEBOOK, INSTAGRAM, TIKTOK
+  postUrl     String?
+  postedAt    DateTime @default(now())
 }
 
 // Tabla para registrar el cierre financiero y flujo de caja
@@ -121,17 +132,10 @@ model Sale {
 
   // Si fue compartido internamente (otro agente trajo al comprador)
   sellingAgentId  Int?      // ID del otro agente interno si aplica
+  
+  status          String    @default("PENDIENTE") // PENDIENTE, APROBADO, RECHAZADO
 }
 
-// Formularios internos (Reporte de cierre que llenan los agentes)
-model ClosingReport {
-  id          Int      @id @default(autoincrement())
-  agentId     Int
-  agent       User     @relation(fields: [agentId], references: [id])
-  content     Json     // Datos flexibles del formulario
-  status      String   @default("PENDIENTE") // PENDIENTE, APROBADO, PAGADO
-  createdAt   DateTime @default(now())
-}
 
 model InternalPost {
   id          Int      @id @default(autoincrement())

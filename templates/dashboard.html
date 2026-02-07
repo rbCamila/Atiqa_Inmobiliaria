@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Panel de Control{% endblock %}
+
+{% block content %}
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-label">Propiedades Activas</div>
+        <div class="stat-value">{{ stats.inventory_status | selectattr("status", "equalto", "DISPONIBLE") | list | length }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Agentes Activos</div>
+        <div class="stat-value">{{ stats.active_agents }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Ventas del Mes</div>
+        <div class="stat-value">{{ stats.monthly_sales.sales_count }}</div>
+        <small class="stat-label">Ingresos: ${{ stats.monthly_sales.total_income or 0 }}</small>
+    </div>
+    <div class="stat-card" style="border-left-color: var(--warning);">
+        <div class="stat-label">Cierres Pendientes</div>
+        <div class="stat-value">{{ stats.pending_approvals }}</div>
+    </div>
+</div>
+
+<div class="card">
+    <h3>Novedades Internas</h3>
+    <p style="color: var(--text-secondary); margin-top: 0.5rem;">Mantente al día con las últimas noticias de la oficina.</p>
+    <!-- Aquí podrías iterar sobre InternalPosts -->
+    <div style="margin-top: 1rem; padding: 1rem; background: #F0F2F5; border-radius: 8px;">
+        <strong>Reunión Semanal</strong>
+        <p>Recordatorio de reunión de equipo este viernes a las 9 AM.</p>
+    </div>
+</div>
+{% endblock %}

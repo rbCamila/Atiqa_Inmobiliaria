@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Usuarios del Sistema{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="flex-between">
+        <h3>Equipo de Agentes</h3>
+        <button class="btn btn-primary" onclick="alert('Implementar modal de creación')">+ Nuevo Usuario</button>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Email</th>
+                <th>Rol</th>
+                <th>Estado</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users %}
+            <tr>
+                <td>{{ user.fullName }}</td>
+                <td>{{ user.email }}</td>
+                <td><span class="badge badge-info">{{ user.role }}</span></td>
+                <td>{{ 'Activo' if user.isActive else 'Inactivo' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

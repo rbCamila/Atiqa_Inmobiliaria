@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Registrar Propiedad{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 800px; margin: 0 auto;">
+    <form method="POST">
+        <div class="form-group">
+            <label class="form-label">Título de la Publicación</label>
+            <input type="text" name="title" class="form-control" required>
+        </div>
+        
+        <div class="grid-2">
+            <div class="form-group">
+                <label class="form-label">Precio</label>
+                <input type="number" step="0.01" name="price" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Moneda</label>
+                <select name="currency" class="form-control">
+                    <option value="USD">USD (Dólares)</option>
+                    <option value="PEN">PEN (Soles)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="grid-2">
+            <div class="form-group">
+                <label class="form-label">Operación</label>
+                <select name="operation" class="form-control">
+                    <option value="VENTA">Venta</option>
+                    <option value="ALQUILER">Alquiler</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Comisión (%)</label>
+                <input type="number" step="0.01" name="commissionPct" class="form-control" value="3.00">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Dirección</label>
+            <input type="text" name="address" class="form-control" required>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Descripción</label>
+            <textarea name="description" class="form-control" rows="4"></textarea>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Propietario (ID Cliente)</label>
+            <input type="number" name="ownerId" class="form-control" placeholder="ID del cliente registrado" required>
+            <small><a href="{{ url_for('clients_view') }}">Ver lista de clientes</a></small>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">
+                <input type="checkbox" name="exclusive" value="1"> Contrato de Exclusividad
+            </label>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Guardar Propiedad</button>
+        <a href="{{ url_for('properties_view') }}" class="btn btn-secondary">Cancelar</a>
+    </form>
+</div>
+{% endblock %}

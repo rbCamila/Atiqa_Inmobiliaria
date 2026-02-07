@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Inventario de Propiedades{% endblock %}
+
+{% block content %}
+<div class="flex-between">
+    <div>
+        <a href="{{ url_for('properties_view', status='DISPONIBLE') }}" class="btn btn-secondary">Disponibles</a>
+        <a href="{{ url_for('properties_view', status='VENDIDO') }}" class="btn btn-secondary">Vendidas</a>
+    </div>
+    <a href="{{ url_for('property_create_view') }}" class="btn btn-primary">+ Nueva Propiedad</a>
+</div>
+
+<div class="card">
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Título</th>
+                    <th>Precio</th>
+                    <th>Operación</th>
+                    <th>Estado</th>
+                    <th>Agente</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for prop in properties %}
+                <tr>
+                    <td>#{{ prop.id }}</td>
+                    <td>
+                        <strong>{{ prop.title }}</strong><br>
+                        <small style="color: var(--text-secondary);">{{ prop.city }}</small>
+                    </td>
+                    <td>{{ prop.currency }} {{ prop.price }}</td>
+                    <td><span class="badge badge-info">{{ prop.operation }}</span></td>
+                    <td>
+                        <span class="badge {{ 'badge-success' if prop.status == 'DISPONIBLE' else 'badge-warning' }}">
+                            {{ prop.status }}
+                        </span>
+                    </td>
+                    <td>{{ prop.AgentName }}</td>
+                    <td>
+                        <a href="{{ url_for('property_detail_view', id=prop.id) }}" class="btn btn-secondary" style="padding: 0.4rem 0.8rem;">Ver</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
